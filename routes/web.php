@@ -17,15 +17,15 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::group([
+// Route::group([
 
-    'middleware' => ['web'],
+//     'middleware' => ['web'],
 
-], function ($router) {
+// ], function ($router) {
 
-    Route::post('login', [AuthController::class, 'login']);
-    // Route::post('logout', 'AuthController@logout');
-    // Route::post('refresh', 'AuthController@refresh');
-    // Route::post('me', 'AuthController@me');
+//     Route::post('login', array('middleware' => 'cors', 'uses' => [AuthController::class, 'login']));
+//     // Route::post('logout', 'AuthController@logout');
+//     // Route::post('refresh', 'AuthController@refresh');
+//     // Route::post('me', 'AuthController@me');
 
-});
+// });

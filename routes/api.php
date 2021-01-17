@@ -17,9 +17,9 @@ use App\Http\Controllers\AuthController;
 |
 */
 
-Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
-});
+// Route::middleware('auth:api')->get('/user', function (Request $request) {
+//     return $request->user();
+// });
 
 // User related api
 Route::get('/getbooklist', [UsersController::class, 'getallbookslist']);
@@ -35,28 +35,28 @@ Route::get('/organizeloans', [LibrarianController::class, 'organizeloans']);
 Route::post('/updateloan', [LibrarianController::class, 'updateloan']);
 Route::post('/updatereturn', [LibrarianController::class, 'updatereturn']);
 
-// Authentication api
-Route::prefix('auth')->group(function () {    
-    Route::post('register', [AuthController::class, 'register']);
-    // Route::post('login', [AuthController::class, 'login']);
-    Route::get('refresh',  [AuthController::class, 'refresh']);
-
-    Route::group(['middleware' => 'auth:api'], function(){
-        Route::get('user', [AuthController::class, 'user']);
-        Route::post('logout', [AuthController::class, 'logout']);
-    });
-});
-
-// Route::group([
-
-//     'middleware' => ['web'],
-//     'prefix' => 'auth'
-
-// ], function ($router) {
-
+// // Authentication api
+// Route::prefix('auth')->group(function () {    
+//     Route::post('register', [AuthController::class, 'register']);
 //     Route::post('login', [AuthController::class, 'login']);
-//     // Route::post('logout', 'AuthController@logout');
-//     // Route::post('refresh', 'AuthController@refresh');
-//     // Route::post('me', 'AuthController@me');
+//     Route::get('refresh',  [AuthController::class, 'refresh']);
 
+//     Route::group(['middleware' => 'auth:api'], function(){
+//         Route::get('user', [AuthController::class, 'user']);
+//         Route::post('logout', [AuthController::class, 'logout']);
+//     });
 // });
+
+Route::group([
+
+    // 'middleware' => 'api',
+    'prefix' => 'auth'
+
+], function ($router) {
+
+    Route::post('login', [AuthController::class, 'login']);
+    Route::post('logout', [AuthController::class, 'logout']);
+    // Route::post('refresh', 'AuthController@refresh');
+    // Route::post('me', 'AuthController@me');
+
+});

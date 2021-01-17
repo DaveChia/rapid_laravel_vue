@@ -13,11 +13,15 @@ class LibrarianController extends Controller
      *
      * @return Object
      */
-    public function organizeloans()
+    public function organizeloans(Request $request)
     {
+        if ($this->checktoken($request) !== 'validtoken') {
+            return $this->checktoken($request);
+        }
+
         $output = [];
 
-        $user = DB::table('lib_user_users')->select('username')->where('id', $_GET['userid'])->first();
+        $user = DB::table('users')->select('name')->where('id', $_GET['userid'])->first();
         
         if($_GET['loantype'] == 'loan'){
             $loanlist = DB::table('lib_book_loans AS bl')
@@ -80,6 +84,9 @@ class LibrarianController extends Controller
      */
     public function updateloan(Request $request)
     {
+        if ($this->checktoken($request) !== 'validtoken') {
+            return $this->checktoken($request);
+        }
         $output = [];
 
         $useridinput = $request->input('userid');
@@ -88,7 +95,7 @@ class LibrarianController extends Controller
         $update = DB::table('lib_book_loans')
                 ->where('userid', $useridinput)
                 ->whereIn('id', $bookidsinput)
-                ->update(['loanstatus' => 2, 'datecollected' => time()]);
+                ->update(['loanstatus' => 2, 'datecollected' => time(), 'datemodified' => time()]);
 
         if($update>0 ){
             $output['results'] = true;
@@ -105,6 +112,10 @@ class LibrarianController extends Controller
      */
     public function updatereturn(Request $request)
     {
+        if ($this->checktoken($request) !== 'validtoken') {
+            return $this->checktoken($request);
+        }
+        
         $output = [];
 
         $useridinput = $request->input('userid');
@@ -114,20 +125,58 @@ class LibrarianController extends Controller
                 ->where('userid', $useridinput)
                 ->where('loanstatus',2)
                 ->whereIn('id', $bookidsinput)
-                ->update(['loanstatus' => 3, 'datereturned' => time()]);
+                ->update(['loanstatus' => 3, 'datereturned' => time(), 'datemodified' => time()]);
+
+               
 
         $update2 = DB::table('lib_book_loans')
                 ->where('userid', $useridinput)
                 ->where('loanstatus',8)
                 ->whereIn('id', $bookidsinput)
-                ->update(['loanstatus' => 7, 'datereturned' => time()]);		
+                ->update(['loanstatus' => 7, 'datereturned' => time(), 'datemodified' => time()]);	
+                
+                
+               
 
         if($update1>0 || $update2>0){
             $output['results'] = true;
+            $updatestocks = DB::table('lib_book_list AS blist')
+            ->join('lib_book_loans AS bl', 'bl.bookid', '=', 'blist.id')
+            ->whereIn('bl.id', $bookidsinput)
+            ->increment('currentstock');
+            
         }else{
             $output['results'] = false;
         }
         return $output;
+    }
+
+    protected function checktoken($request)
+    {
+        $token = $request->cookie('libraryAuth');
+
+        if(!$token ){
+            return response()->json(['error' => 'Session Expired1']);
+        }
+
+        $result=DB::table('sessions')
+                ->where('sessionid', $token)
+                ->select(
+                    'datecreated'
+                )->get();
+        
+        $checktokenexpiry = 0;
+           
+        if(count($result)>0){
+            $checktokenexpiry = time() - $result[0]->datecreated ;
+        }
+
+        if(count($result)===0 || $checktokenexpiry >= 3600){
+            return response()->json(['error' => 'Session Expired2'])->cookie('libraryAuth','',-1);
+        }
+
+        return 'validtoken';
+
     }
 
 }

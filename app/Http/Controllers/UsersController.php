@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 use DB;
 
 class UsersController extends Controller
@@ -15,6 +17,11 @@ class UsersController extends Controller
      */
     public function getallbookslist(Request $request)
     {
+
+       if ($this->checktoken($request) !== 'validtoken') {
+            return $this->checktoken($request);
+       }
+
         $users = DB::table('lib_book_list AS bl')
         ->join('lib_book_genre AS bg', 'bl.genreid', '=', 'bg.id')
         ->join('lib_book_bookwithbookshelf AS bb', 'bb.bookid', '=', 'bl.id')
@@ -32,8 +39,13 @@ class UsersController extends Controller
      *
      * @return Object
      */
-    public function getduedlist()
+    public function getduedlist(Request $request)
     {
+
+        if ($this->checktoken($request) !== 'validtoken') {
+            return $this->checktoken($request);
+        }
+
         $output = [];
         $now = time();
         $overduecharges = 0.00;
@@ -71,8 +83,12 @@ class UsersController extends Controller
      *
      * @return Object
      */
-    public function getloanlist()
+    public function getloanlist(Request $request)
     {
+        if ($this->checktoken($request) !== 'validtoken') {
+            return $this->checktoken($request);
+        }
+
         $output = [];
 
         $loanlist = DB::table('lib_book_loans AS bl')
@@ -126,52 +142,59 @@ class UsersController extends Controller
      */
     public function loanbook(Request $request)
     {
+        if ($this->checktoken($request) !== 'validtoken') {
+            return $this->checktoken($request);
+        }
+
         $output = [];
     
-	$bookidinput = $request->input('bookid');
-	$useridinput =$request->input('userid');
+        $bookidinput = $request->input('bookid');
+        $useridinput =$request->input('userid');
 
-	$loanwithsamebook = DB::table('lib_book_loans')
-            ->select(
-				'id'
-			)->where('userid', $useridinput
-			)->where('bookid', $bookidinput
-			)->get();
+        $loanwithsamebook = DB::table('lib_book_loans')
+                            ->select(
+                                'id'
+                            )->where('userid', $useridinput
+                            )->where('bookid', $bookidinput
+                            )->whereIn('loanstatus', [1,2,4,8]
+                            )->get();
 
 	if (count($loanwithsamebook) === 0) {
 
-		$remainingbookcount = DB::table('lib_book_list')
-            ->select(
-				'currentstock'
-			)->where('id', $bookidinput
-			)->where('currentstock', '>', 0
-			)->get();
+        $remainingbookcount = DB::table('lib_book_list')
+                            ->select(
+                                'currentstock'
+                            )->where('id', $bookidinput
+                            )->where('currentstock', '>', 0
+                            )->get();
 
-		if (count($remainingbookcount) > 0) {
+            if (count($remainingbookcount) > 0) {
 
-			$updatestocks = DB::table('lib_book_list')
-              ->where('id', $bookidinput)
-              ->decrement('currentstock');
+                $updatestocks = DB::table('lib_book_list')
+                    ->where('id', $bookidinput)
+                    ->decrement('currentstock');
 
-			if ($updatestocks > 0) {
-				$output['loanresult'] = DB::table('lib_book_loans')->insert([
-					'userid' => $useridinput,
-					'bookid' => $bookidinput,
-					'dateborrowed' => time(),
-					'loanstatus' => 1
-				]);
-			}
+                if ($updatestocks > 0) {
+                    $output['loanresult'] = DB::table('lib_book_loans')->insert([
+                            'userid' => $useridinput,
+                            'bookid' => $bookidinput,
+                            'dateborrowed' => time(),
+                            'datecreated' => time(),
+                            'datemodified' => time(),
+                            'loanstatus' => 1
+                    ]);
+                }
 
-		}else{
-			$output['loanresult'] = 'Not Available';
-		}
+            }else{
+                $output['loanresult'] = 'Not Available';
+            }
 
-	}else{
-		$output['loanresult'] = 'Book Already Loaned';
-	}
-	$output['test'] = $bookidinput;
-	return $output;
+    }else{
+        $output['loanresult'] = 'Book Already Loaned';
     }
+
+    return $output;
+}
 
     /**
      * Process due payment
@@ -180,6 +203,10 @@ class UsersController extends Controller
      */
     public function paydues(Request $request)
     {
+        if ($this->checktoken($request) !== 'validtoken') {
+            return $this->checktoken($request);
+        }
+        
         $output = [];
 
         $useridinput = $request->input('userid');
@@ -200,5 +227,56 @@ class UsersController extends Controller
             $output['results'] = false;
         }
 	    return $output;
+    }
+
+    /**
+     * Get the token array structure.
+     *
+     * @param  string $token
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    protected function respondWithToken($token)
+    {
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => auth()->factory()->getTTL() * 60
+        ]);
+    }
+
+    /**
+     * Get the token array structure.
+     *
+     * @param  string $token
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    protected function checktoken($request)
+    {
+        $token = $request->cookie('libraryAuth');
+
+        if(!$token ){
+            return response()->json(['error' => 'Session Expired1']);
+        }
+
+        $result=DB::table('sessions')
+                ->where('sessionid', $token)
+                ->select(
+                    'datecreated'
+                )->get();
+        
+        $checktokenexpiry = 0;
+           
+        if(count($result)>0){
+            $checktokenexpiry = time() - $result[0]->datecreated ;
+        }
+
+        if(count($result)===0 || $checktokenexpiry >= 3600){
+            return response()->json(['error' => 'Session Expired2'])->cookie('libraryAuth','',-1);
+        }
+
+        return 'validtoken';
+
     }
 }
