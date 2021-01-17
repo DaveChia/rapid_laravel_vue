@@ -23,13 +23,13 @@ class UsersController extends Controller
        }
 
         $users = DB::table('lib_book_list AS bl')
-        ->join('lib_book_genre AS bg', 'bl.genreid', '=', 'bg.id')
-        ->join('lib_book_bookwithbookshelf AS bb', 'bb.bookid', '=', 'bl.id')
-        ->join('lib_book_bookshelf AS bs', 'bs.id', '=', 'bb.bookshelfid')
-        ->select(
-            'bl.id', 'bl.bookname', 'bl.currentstock', 'bl.bookcoverimage', 'bl.booksummary', 'bg.genrename', 'bl.isbn',
-            DB::raw('CONCAT(bs.rackname, "-", bs.racklevel, "-", bs.rackcolumn) AS "shelfname"')
-        )->get();
+                ->join('lib_book_genre AS bg', 'bl.genreid', '=', 'bg.id')
+                ->join('lib_book_bookwithbookshelf AS bb', 'bb.bookid', '=', 'bl.id')
+                ->join('lib_book_bookshelf AS bs', 'bs.id', '=', 'bb.bookshelfid')
+                ->select(
+                    'bl.id', 'bl.bookname', 'bl.currentstock', 'bl.bookcoverimage', 'bl.booksummary', 'bg.genrename', 'bl.isbn',
+                    DB::raw('CONCAT(bs.rackname, "-", bs.racklevel, "-", bs.rackcolumn) AS "shelfname"'))
+                ->get();
        
         return $users;
     }
@@ -54,14 +54,17 @@ class UsersController extends Controller
         $duedlist = DB::table('lib_book_loans AS bl')
                 ->select(
                     'bl.bookid', 'bl.dateborrowed',
-                    DB::raw('DATEDIFF(FROM_UNIXTIME(UNIX_TIMESTAMP())'),
-                    DB::raw('FROM_UNIXTIME(bl.datedued)) AS "daysoverdued"'),
+                    // Actual Implementation
+                    // DB::raw('DATEDIFF(FROM_UNIXTIME(UNIX_TIMESTAMP())'),
+                    // DB::raw('FROM_UNIXTIME(bl.datedued)) AS "daysoverdued"'),
+                    // Test code for following line, due by minute
+                    DB::raw('TIMESTAMPDIFF(MINUTE,FROM_UNIXTIME(datecollected),FROM_UNIXTIME(UNIX_TIMESTAMP())) AS "daysoverdued"'),
                     DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.datedued), "%M %d %Y") AS "datedued"'),
                     DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.datecollected), "%M %d %Y") AS "datecollected"'),
                     DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.datereturned), "%M %d %Y") AS "datereturned"'),
-                    DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.dateborrowed), "%M %d %Y") AS "dateborrowed"')
-                )->where('bl.userid', $_GET['userid']
-                )->where(function($query) {
+                    DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.dateborrowed), "%M %d %Y") AS "dateborrowed"'))
+                ->where('bl.userid', $_GET['userid'])
+                ->where(function($query) {
                     $query->where('bl.loanstatus', 4)
                           ->orWhere('bl.loanstatus', 6);
                 })
@@ -98,10 +101,11 @@ class UsersController extends Controller
                     DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.datedued), "%M %d %Y") AS "datedued"'),
                     DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.dateduepaid), "%M %d %Y") AS "dateduepaid"'),
                     DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.datecollected), "%M %d %Y") AS "datecollected"'),
+                    DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.datecancelled), "%M %d %Y") AS "datecancelled"'),
                     DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.datereturned), "%M %d %Y") AS "datereturned"'),
-                    DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.dateborrowed), "%M %d %Y") AS "dateborrowed"')
-                )->where('bl.userid', $_GET['userid']
-                )->get();
+                    DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.dateborrowed), "%M %d %Y") AS "dateborrowed"'))
+                ->where('bl.userid', $_GET['userid'])
+                ->get();
     
         $output['loanbooksdata'] = $loanlist;
         $output['loanbookscount'] = count($loanlist);
@@ -153,26 +157,26 @@ class UsersController extends Controller
 
         $loanwithsamebook = DB::table('lib_book_loans')
                             ->select(
-                                'id'
-                            )->where('userid', $useridinput
-                            )->where('bookid', $bookidinput
-                            )->whereIn('loanstatus', [1,2,4,8]
-                            )->get();
+                                'id')
+                            ->where('userid', $useridinput)
+                            ->where('bookid', $bookidinput)
+                            ->whereIn('loanstatus', [1,2,4,8])
+                            ->get();
 
 	if (count($loanwithsamebook) === 0) {
 
         $remainingbookcount = DB::table('lib_book_list')
                             ->select(
-                                'currentstock'
-                            )->where('id', $bookidinput
-                            )->where('currentstock', '>', 0
-                            )->get();
+                                'currentstock')
+                            ->where('id', $bookidinput)
+                            ->where('currentstock', '>', 0)
+                            ->get();
 
             if (count($remainingbookcount) > 0) {
 
                 $updatestocks = DB::table('lib_book_list')
-                    ->where('id', $bookidinput)
-                    ->decrement('currentstock');
+                                ->where('id', $bookidinput)
+                                ->decrement('currentstock');
 
                 if ($updatestocks > 0) {
                     $output['loanresult'] = DB::table('lib_book_loans')->insert([
@@ -229,26 +233,25 @@ class UsersController extends Controller
 	    return $output;
     }
 
-    /**
-     * Get the token array structure.
-     *
-     * @param  string $token
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    protected function respondWithToken($token)
-    {
-        return response()->json([
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'expires_in' => auth()->factory()->getTTL() * 60
-        ]);
-    }
+    // /**
+    //  * Get the token array structure.
+    //  *
+    //  * @param  string $token
+    //  *
+    //  * @return \Illuminate\Http\JsonResponse
+    //  */
+    // protected function respondWithToken($token)
+    // {
+    //     return response()->json([
+    //         'access_token' => $token,
+    //         'token_type' => 'bearer',
+    //         'expires_in' => auth()->factory()->getTTL() * 60
+    //     ]);
+    // }
 
     /**
-     * Get the token array structure.
+     * Authenticate JWT token in cookie
      *
-     * @param  string $token
      *
      * @return \Illuminate\Http\JsonResponse
      */
@@ -257,14 +260,14 @@ class UsersController extends Controller
         $token = $request->cookie('libraryAuth');
 
         if(!$token ){
-            return response()->json(['error' => 'Session Expired1']);
+            return response()->json(['error' => 'Session Expired']);
         }
 
         $result=DB::table('sessions')
                 ->where('sessionid', $token)
                 ->select(
-                    'datecreated'
-                )->get();
+                    'datecreated')
+                ->get();
         
         $checktokenexpiry = 0;
            
@@ -273,7 +276,7 @@ class UsersController extends Controller
         }
 
         if(count($result)===0 || $checktokenexpiry >= 3600){
-            return response()->json(['error' => 'Session Expired2'])->cookie('libraryAuth','',-1);
+            return response()->json(['error' => 'Session Expired'])->cookie('libraryAuth','',-1);
         }
 
         return 'validtoken';

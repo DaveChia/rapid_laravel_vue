@@ -22,7 +22,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Get a JWT via given credentials.
+     * Returns a cookie containing a JWT token if user is authenticated
      *
      * @return \Illuminate\Http\JsonResponse
      */
@@ -43,48 +43,36 @@ class AuthController extends Controller
         $userId = Auth::id();
 
         $result=DB::table('sessions')
-        ->join('users', 'users.id', '=', 'sessions.user_id')
-        ->where('sessions.user_id', $userId)
-        ->select(
-            'sessions.user_id','users.name'
-        )->get();
+                ->join('users', 'users.id', '=', 'sessions.user_id')
+                ->where('sessions.user_id', $userId)
+                ->select(
+                    'sessions.user_id','users.name')
+                ->get();
 
         $result2=DB::table('users')
-        ->where('id', $userId)
-        ->select(
-            'name'
-        )->get();
+                ->where('id', $userId)
+                ->select(
+                    'name')
+                ->get();
   
         $username = $result2[0]->name;
 
-        // return $test;
-        // $username = $result[0]->name;
-
         if(count($result) === 0){
             $result2 = DB::table('sessions')->upsert(
-            [['sessionid' => $token, 'user_id' => $userId, 'datecreated' => time()]], 
-            ['user_id'], ['sessionid','datecreated']);
+                    [['sessionid' => $token, 'user_id' => $userId, 'datecreated' => time()]], 
+                    ['user_id'], ['sessionid','datecreated']);
         }else{
             $result3 = DB::table('sessions')
-                ->where('user_id', $userId)
-                ->update(['sessionid' => $token, 'datecreated' => time()]);
+                    ->where('user_id', $userId)
+                    ->update(['sessionid' => $token, 'datecreated' => time()]);
         }
 
-        return response()->json(['Login' => 'Success','userid' => $userId,'username' => $username])->cookie('libraryAuth',$token,60);
+        return response()->json(['Login' => 'Success','userid' => $userId,'username' => $username])
+                        ->cookie('libraryAuth',$token,60);
     }
 
     /**
-     * Get the authenticated User.
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function me()
-    {
-        return response()->json(auth()->user());
-    }
-
-    /**
-     * Log the user out (Invalidate the token).
+     * Log the user out (Invalidate the token and unset cookie).
      *
      * @return \Illuminate\Http\JsonResponse
      */
@@ -93,19 +81,12 @@ class AuthController extends Controller
         $cookiekey = $request->cookie('libraryAuth');
         $userId = $request['userid'];
 
-        // $result=DB::table('sessions')
-        // ->where('sessionid', $cookiekey)
-        // ->where('user_id', $userId)
-        // ->select(
-        //     'user_id'
-        // )->get();
-
-        DB::table('sessions')->where('user_id', $userId)->where('sessionid', $cookiekey)->delete();
-        
-        
-        // return $request['userid'];
-
-        return response()->json(['message' => 'Successfully logged out'])->cookie('libraryAuth','',-1);
+        DB::table('sessions')->where('user_id', $userId)
+            ->where('sessionid', $cookiekey)
+            ->delete();
+    
+        return response()->json(['message' => 'Successfully logged out'])
+                        ->cookie('libraryAuth','',-1);
     }
 
     /**
@@ -118,27 +99,4 @@ class AuthController extends Controller
         return $this->respondWithToken(auth()->refresh());
     }
 
-    // /**
-    //  * Get the token array structure.
-    //  *
-    //  * @param  string $token
-    //  *
-    //  * @return \Illuminate\Http\JsonResponse
-    //  */
-    // protected function respondWithToken($token)
-    // {
-    //     return response()->json([
-    //         'access_token' => $token,
-    //         'token_type' => 'bearer',
-    //         'expires_in' => auth()->factory()->getTTL() * 60
-    //     ]);
-    // }
-
-    // public function test(Request $request)
-    // {
-    //     $cookiekey = $request->cookie('libraryAuth');
-       
-
-    //     return '54321'
-    // }
 }

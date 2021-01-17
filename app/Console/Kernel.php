@@ -35,15 +35,28 @@ class Kernel extends ConsoleKernel
                             ->where('id', 1)
                             ->orWhere('id', 2)->get();
 
+            // // Original Code to Implement
+            // DB::table('lib_book_loans')
+            //     ->where('loanstatus', 1)
+            //     ->where(DB::raw('DATEDIFF(FROM_UNIXTIME(UNIX_TIMESTAMP()),FROM_UNIXTIME(dateborrowed))'), '>', $loansettings[0]->settingvalue)
+            //     ->update(['loanstatus' => 5, 'datecancelled' => time()]);
+
+            // DB::table('lib_book_loans')
+            //     ->where('loanstatus', 2)
+            //     ->where(DB::raw('DATEDIFF(FROM_UNIXTIME(UNIX_TIMESTAMP()),FROM_UNIXTIME(datecollected))'), '>', $loansettings[1]->settingvalue)
+            //     ->update(['loanstatus' => 4, 'datedued' => time()]);
+
+            // Test Code
             DB::table('lib_book_loans')
-                ->where('loanstatus', 1)
-                ->where(DB::raw('DATEDIFF(FROM_UNIXTIME(UNIX_TIMESTAMP()),FROM_UNIXTIME(dateborrowed))'), '>', $loansettings[0]->settingvalue)
-                ->update(['loanstatus' => 5, 'datecancelled' => time()]);
+            ->where('loanstatus', 1)
+            ->where(DB::raw('TIMESTAMPDIFF(MINUTE,FROM_UNIXTIME(dateborrowed),FROM_UNIXTIME(UNIX_TIMESTAMP()))'), '>=', 1)
+            ->update(['loanstatus' => 5, 'datecancelled' => time()]);
 
             DB::table('lib_book_loans')
-                ->where('loanstatus', 2)
-                ->where(DB::raw('DATEDIFF(FROM_UNIXTIME(UNIX_TIMESTAMP()),FROM_UNIXTIME(datecollected))'), '>', $loansettings[1]->settingvalue)
-                ->update(['loanstatus' => 4, 'datedued' => time()]);
+            ->where('loanstatus', 2)
+            ->where(DB::raw('TIMESTAMPDIFF(MINUTE,FROM_UNIXTIME(datecollected),FROM_UNIXTIME(UNIX_TIMESTAMP()))'), '>=', 1)
+            ->update(['loanstatus' => 4, 'datedued' => time()]);
+                
 
 
         })->everyMinute();
