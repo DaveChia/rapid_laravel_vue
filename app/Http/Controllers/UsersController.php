@@ -18,10 +18,6 @@ class UsersController extends Controller
     public function getallbookslist(Request $request)
     {
 
-       if ($this->checktoken($request) !== 'validtoken') {
-            return $this->checktoken($request);
-       }
-
         $users = DB::table('lib_book_list AS bl')
                 ->join('lib_book_genre AS bg', 'bl.genreid', '=', 'bg.id')
                 ->join('lib_book_bookwithbookshelf AS bb', 'bb.bookid', '=', 'bl.id')
@@ -41,10 +37,6 @@ class UsersController extends Controller
      */
     public function getduedlist(Request $request)
     {
-
-        if ($this->checktoken($request) !== 'validtoken') {
-            return $this->checktoken($request);
-        }
 
         $output = [];
         $now = time();
@@ -88,10 +80,6 @@ class UsersController extends Controller
      */
     public function getloanlist(Request $request)
     {
-        if ($this->checktoken($request) !== 'validtoken') {
-            return $this->checktoken($request);
-        }
-
         $output = [];
 
         $loanlist = DB::table('lib_book_loans AS bl')
@@ -113,31 +101,31 @@ class UsersController extends Controller
         return $output;
     }
 
-    // /**
-    //  * Search for book by bookname or genre
-    //  *
-    //  * @return Object
-    //  */
-    // public function searchbooks()
-    // {
-    //     $output = [];
+    /**
+     * Search for book by bookname or genre
+     *
+     * @return Object
+     */
+    public function searchbooks()
+    {
+        $output = [];
 
-    //     $searchbookinput = '%' . $_GET['bookname']. '%';
-    //     $searchgenreinput = '%' . $_GET['bookgenre']. '%';
+        $searchbookinput = '%' . $_GET['bookname']. '%';
+        $searchgenreinput = '%' . $_GET['bookgenre']. '%';
     
-    //     $searchresults = DB::table('lib_book_list AS bl')
-    //                     ->join('lib_book_genre AS bg', 'bl.genreid', '=', 'bg.id')
-    //                     ->select(
-    //                             'bl.id', 'bl.bookname', 'bl.currentstock', 'bl.bookcoverimage', 'bl.booksummary', 'bg.genrename'
-    //                     )->where('bl.bookname', 'LIKE' , $searchbookinput
-    //                     )->orWhere('bg.genrename', 'LIKE' , $searchgenreinput
-    //                     )->get();
+        $searchresults = DB::table('lib_book_list AS bl')
+                        ->join('lib_book_genre AS bg', 'bl.genreid', '=', 'bg.id')
+                        ->select(
+                                'bl.id', 'bl.bookname', 'bl.currentstock', 'bl.bookcoverimage', 'bl.booksummary', 'bg.genrename'
+                        )->where('bl.bookname', 'LIKE' , $searchbookinput
+                        )->orWhere('bg.genrename', 'LIKE' , $searchgenreinput
+                        )->get();
     
-    //     $output['searchresults'] = $searchresults;
+        $output['searchresults'] = $searchresults;
     
     
-    //     return $output;
-    // }
+        return $output;
+    }
 
     /**
      * Process book loaning
@@ -146,10 +134,6 @@ class UsersController extends Controller
      */
     public function loanbook(Request $request)
     {
-        if ($this->checktoken($request) !== 'validtoken') {
-            return $this->checktoken($request);
-        }
-
         $output = [];
     
         $bookidinput = $request->input('bookid');
@@ -207,10 +191,6 @@ class UsersController extends Controller
      */
     public function paydues(Request $request)
     {
-        if ($this->checktoken($request) !== 'validtoken') {
-            return $this->checktoken($request);
-        }
-        
         $output = [];
 
         $useridinput = $request->input('userid');
@@ -249,37 +229,4 @@ class UsersController extends Controller
     //     ]);
     // }
 
-    /**
-     * Authenticate JWT token in cookie
-     *
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    protected function checktoken($request)
-    {
-        $token = $request->cookie('libraryAuth');
-
-        if(!$token ){
-            return response()->json(['error' => 'Session Expired']);
-        }
-
-        $result=DB::table('sessions')
-                ->where('sessionid', $token)
-                ->select(
-                    'datecreated')
-                ->get();
-        
-        $checktokenexpiry = 0;
-           
-        if(count($result)>0){
-            $checktokenexpiry = time() - $result[0]->datecreated ;
-        }
-
-        if(count($result)===0 || $checktokenexpiry >= 3600){
-            return response()->json(['error' => 'Session Expired'])->cookie('libraryAuth','',-1);
-        }
-
-        return 'validtoken';
-
-    }
 }

@@ -32,6 +32,7 @@ class Kernel extends HttpKernel
      */
     protected $middlewareGroups = [
         'web' => [
+            \Fruitcake\Cors\HandleCors::class,
             EnsureFrontendRequestsAreStateful::class,
             \App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
@@ -40,13 +41,14 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \Fruitcake\Cors\HandleCors::class,
+            // \Fruitcake\Cors\HandleCors::class,
         ],
 
         'api' => [
+            \Fruitcake\Cors\HandleCors::class,
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \Fruitcake\Cors\HandleCors::class,
+            // \Fruitcake\Cors\HandleCors::class,
         ],
     ];
 
@@ -67,8 +69,9 @@ class Kernel extends HttpKernel
         'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-        'isAdmin' => \App\Http\Middleware\CheckIsAdmin::class,
-        'isAdminOrSelf' => \App\Http\Middleware\CheckIsAdminOrSelf::class,
-        'cors' => \App\Http\Middleware\CORS::class,
+        // 'isAdmin' => \App\Http\Middleware\CheckIsAdmin::class,
+        // 'isAdminOrSelf' => \App\Http\Middleware\CheckIsAdminOrSelf::class,
+        // 'cors' => \App\Http\Middleware\CORS::class,
+        'checkTokenValid' => \App\Http\Middleware\CheckTokenValid::class,
     ];
 }

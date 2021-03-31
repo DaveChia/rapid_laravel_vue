@@ -15,9 +15,6 @@ class LibrarianController extends Controller
      */
     public function organizeloans(Request $request)
     {
-        if ($this->checktoken($request) !== 'validtoken') {
-            return $this->checktoken($request);
-        }
 
         $output = [];
 
@@ -52,7 +49,7 @@ class LibrarianController extends Controller
                             ->where('bl.userid', $_GET['userid'])
                             ->whereIn('bl.loanstatus', [2,4,8])
                             ->get();
-
+                            
         }else{
             $loanlist = DB::table('lib_book_loans AS bl')
                             ->join('lib_book_list AS blist', 'bl.bookid', '=', 'blist.id')
@@ -61,6 +58,7 @@ class LibrarianController extends Controller
                             ->select(
                                 'bl.bookid', 'bl.dateborrowed', 'blist.bookname', 'blist.bookcoverimage', 'bl.loanstatus', 'blist.currentstock', 'bl.id AS loanid',
                                 DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.datedued), "%M %d %Y") AS "datedued"'),
+                                DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.datecancelled), "%M %d %Y") AS "datecancelled"'),
                                 DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.dateduepaid), "%M %d %Y") AS "dateduepaid"'),
                                 DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.datecollected), "%M %d %Y") AS "datecollected"'),
                                 DB::raw('DATE_FORMAT(FROM_UNIXTIME(bl.datereturned), "%M %d %Y") AS "datereturned"'),
@@ -83,10 +81,6 @@ class LibrarianController extends Controller
      */
     public function updateloan(Request $request)
     {
-        if ($this->checktoken($request) !== 'validtoken') {
-            return $this->checktoken($request);
-        }
-
         $output = [];
         $useridinput = $request->input('userid');
         $bookidsinput = $request->input('bookids');
@@ -111,10 +105,6 @@ class LibrarianController extends Controller
      */
     public function updatereturn(Request $request)
     {
-        if ($this->checktoken($request) !== 'validtoken') {
-            return $this->checktoken($request);
-        }
-
         $output = [];
 
         $useridinput = $request->input('userid');
@@ -149,40 +139,6 @@ class LibrarianController extends Controller
             $output['results'] = false;
         }
         return $output;
-    }
-
-    /**
-     * Authenticate JWT token in cookie
-     *
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    protected function checktoken($request)
-    {
-        $token = $request->cookie('libraryAuth');
-
-        if(!$token){
-            return response()->json(['error' => 'Session Expired']);
-        }
-
-        $result=DB::table('sessions')
-                ->where('sessionid', $token)
-                ->select(
-                    'datecreated')
-                ->get();
-        
-        $checktokenexpiry = 0;
-           
-        if(count($result)>0){
-            $checktokenexpiry = time() - $result[0]->datecreated ;
-        }
-
-        if(count($result)===0 || $checktokenexpiry >= 3600){
-            return response()->json(['error' => 'Session Expired'])->cookie('libraryAuth','',-1);
-        }
-
-        return 'validtoken';
-
     }
 
 }
